@@ -1,0 +1,99 @@
+version: '3'
+services:
+
+  fe:
+    image: ponylee/starrocks:1.18.2
+    container_name: fe
+    hostname: fe
+    restart: always
+    command: ["fe"]
+    environment:
+      FE_NETWORK: 192.167.1.30/24
+    deploy:
+      resources:
+        limits:
+          cpus: '8.00'
+          memory: 32G
+        reservations:
+          cpus: '0.25'
+          memory: 100M
+    volumes:
+      - /data/doris/fe/log:/opt/StarRocks-1.18.2/fe/log:rw
+      - /data/doris/fe/doris-meta:/opt/StarRocks-1.18.2/fe/doris-meta:rw
+      - /data/doris/fe/temp_dir:/opt/StarRocks-1.18.2/fe/temp_dir:rw
+    ports:
+      - "8030:8030"
+    networks:
+      dorisnet:
+        ipv4_address: 192.167.1.30
+
+  be01:
+    image: ponylee/starrocks:1.18.2
+    container_name: be01
+    hostname: be01
+    restart: always
+    command: [ "be" ]
+    depends_on:
+      - fe
+    environment:
+      FE_HOST: fe
+      BE_HOST: be01
+      BE_NETWORK: 192.167.1.31/24
+    deploy:
+      resources:
+        limits:
+          cpus: '8.00'
+          memory: 32G
+        reservations:
+          cpus: '0.25'
+          memory: 100M
+    volumes:
+      - /data/doris/be01/log:/opt/StarRocks-1.18.2/be/log:rw
+      - /data/doris/be01/data:/opt/StarRocks-1.18.2/be/data:rw
+    ports:
+      - "8041:8040"
+    networks:
+      dorisnet:
+        ipv4_address: 192.167.1.31
+
+  be02:
+    image: ponylee/starrocks:1.18.2
+    container_name: be02
+    hostname: be02
+    restart: always
+    command: [ "be" ]
+    depends_on:
+      - fe
+    environment:
+      FE_HOST: fe
+      BE_HOST: be02
+      BE_NETWORK: 192.167.1.32/24
+    deploy:
+      resources:
+        limits:
+          cpus: '8.00'
+          memory: 32G
+        reservations:
+          cpus: '0.25'
+          memory: 100M
+    volumes:
+      - /data/doris/be02/log:/opt/StarRocks-1.18.2/be/log:rw
+      - /data/doris/be02/data:/opt/StarRocks-1.18.2/be/data:rw
+    ports:
+      - "8042:8040"
+    networks:
+      dorisnet:
+        ipv4_address: 192.167.1.32
+
+#docker network create -d bridge --subnet 192.167.1.0/24 --gateway 192.167.1.1 dorisnet
+networks:
+  dorisnet:
+    external: true
+
+#volumes:
+#  fe:
+#  be01:
+#  be02:
+
+
+  

@@ -1,0 +1,410 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: bdp-doris-be01-hs
+  namespace: bdp
+  labels:
+    k8s-app: bdp-doris-be01
+spec:
+  ports:
+    - name: tcp-8040-8040-be01-hs
+      protocol: TCP
+      port: 8040
+      targetPort: 8040
+    - name: tcp-9050-9050-be01-hs
+      protocol: TCP
+      port: 9050
+      targetPort: 9050
+    - name: tcp-9060-9060-be01-hs
+      protocol: TCP
+      port: 9060
+      targetPort: 9060
+    - name: tcp-9070-9070-be01-hs
+      protocol: TCP
+      port: 9070
+      targetPort: 9070
+  clusterIP: None
+  selector:
+    k8s-app: bdp-doris-be01
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bdp-doris-be02-hs
+  namespace: bdp
+  labels:
+    k8s-app: bdp-doris-be02
+spec:
+  ports:
+    - name: tcp-8040-8040-be02-hs
+      protocol: TCP
+      port: 8040
+      targetPort: 8040
+    - name: tcp-9050-9050-be02-hs
+      protocol: TCP
+      port: 9050
+      targetPort: 9050
+    - name: tcp-9060-9060-be02-hs
+      protocol: TCP
+      port: 9060
+      targetPort: 9060
+    - name: tcp-9070-9070-be02-hs
+      protocol: TCP
+      port: 9070
+      targetPort: 9070
+  clusterIP: None
+  selector:
+    k8s-app: bdp-doris-be02
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bdp-doris-be03-hs
+  namespace: bdp
+  labels:
+    k8s-app: bdp-doris-be03
+spec:
+  ports:
+    - name: tcp-8040-8040-be03-hs
+      protocol: TCP
+      port: 8040
+      targetPort: 8040
+    - name: tcp-9050-9050-be03-hs
+      protocol: TCP
+      port: 9050
+      targetPort: 9050
+    - name: tcp-9060-9060-be03-hs
+      protocol: TCP
+      port: 9060
+      targetPort: 9060
+    - name: tcp-9070-9070-be03-hs
+      protocol: TCP
+      port: 9070
+      targetPort: 9070
+  clusterIP: None
+  selector:
+    k8s-app: bdp-doris-be03
+---
+# be01 pv
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: bdp-doris-be01-pv  ##pv名称
+spec:
+  capacity:
+    storage: 500Gi ## pv大小，与云硬盘大小一致即可
+  accessModes:
+    - ReadWriteOnce ## pv读写类型，目前支持ReadWriteOnce和ReadOnlyMany
+  mountOptions:
+    - rw ##挂载类型有只读（ro）,读写{rw}，挂载类型和accessModes要对应起来
+    - discard
+  persistentVolumeReclaimPolicy: Retain ##目前只支持Retain模式
+  storageClassName: doris-local-storage ## 使用预先创建的sc
+  local:
+    path: /mnt/be01
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - ambari01
+---
+# be02 pv
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: bdp-doris-be02-pv  ##pv名称
+spec:
+  capacity:
+    storage: 500Gi ## pv大小，与云硬盘大小一致即可
+  accessModes:
+    - ReadWriteOnce ## pv读写类型，目前支持ReadWriteOnce和ReadOnlyMany
+  mountOptions:
+    - rw ##挂载类型有只读（ro）,读写{rw}，挂载类型和accessModes要对应起来
+    - discard
+  persistentVolumeReclaimPolicy: Retain ##目前只支持Retain模式
+  storageClassName: doris-local-storage ## 使用预先创建的sc
+  local:
+    path: /mnt/be02
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - ambari01
+---
+# be03 pv
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: bdp-doris-be03-pv  ##pv名称
+spec:
+  capacity:
+    storage: 500Gi ## pv大小，与云硬盘大小一致即可
+  accessModes:
+    - ReadWriteOnce ## pv读写类型，目前支持ReadWriteOnce和ReadOnlyMany
+  mountOptions:
+    - rw ##挂载类型有只读（ro）,读写{rw}，挂载类型和accessModes要对应起来
+    - discard
+  persistentVolumeReclaimPolicy: Retain ##目前只支持Retain模式
+  storageClassName: doris-local-storage ## 使用预先创建的sc
+  local:
+    path: /mnt/be03
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - ambari01
+---
+# be01 pvc
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bdp-doris-be01-pvc ##pvc名称
+  namespace: bdp
+spec:                ##pv的筛选条件
+  accessModes:
+     - ReadWriteOnce ## pv读写模式
+  volumeMode: Filesystem
+  volumeName: bdp-doris-be01-pv  ##指定pv名称，此为可选字段，当指定特定的pv名称时，只有对应的名称的pv能被bound
+  storageClassName: doris-local-storage  # 根据实际情况而定是否需要删除
+  resources:
+     requests:
+       storage: 500Gi  ##pv大小
+---
+# be02 pvc
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bdp-doris-be02-pvc ##pvc名称
+  namespace: bdp
+spec:                ##pv的筛选条件
+  accessModes:
+     - ReadWriteOnce ## pv读写模式
+  volumeMode: Filesystem
+  volumeName: bdp-doris-be02-pv  ##指定pv名称，此为可选字段，当指定特定的pv名称时，只有对应的名称的pv能被bound
+  storageClassName: doris-local-storage  # 根据实际情况而定是否需要删除
+  resources:
+     requests:
+       storage: 500Gi  ##pv大小
+---
+# be03 pvc
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bdp-doris-be03-pvc ##pvc名称
+  namespace: bdp
+spec:                ##pv的筛选条件
+  accessModes:
+     - ReadWriteOnce ## pv读写模式
+  volumeMode: Filesystem
+  volumeName: bdp-doris-be03-pv  ##指定pv名称，此为可选字段，当指定特定的pv名称时，只有对应的名称的pv能被bound
+  storageClassName: doris-local-storage  # 根据实际情况而定是否需要删除
+  resources:
+     requests:
+       storage: 500Gi  ##pv大小
+---
+# be01
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: bdp-doris-be01
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: bdp-doris-be01
+  serviceName: bdp-doris-be01-hs
+  updateStrategy:
+    type: RollingUpdate
+  podManagementPolicy: OrderedReady
+  template:
+    metadata:
+      labels:
+        app: dbp-doris
+        k8s-app: bdp-doris-be01
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: 192.168.0.4
+      restartPolicy: Always
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: bdp-doris-be01
+        image:  pony/doris:v1
+        imagePullPolicy: Always
+        args:
+        - be
+        env:
+        - name: FE_HOST
+          value: 192.168.0.15  # fe 的 hostname，需要根据实际情况修改
+        - name: BE_HOST
+          value: 192.168.0.4 # be 的 hostname，需要根据实际情况修改
+        - name: BE_NETWORK
+          value: 192.168.0.4/24  # 指定 fe 通信的网卡
+        resources:
+          limits:
+            cpu: "8"
+            memory: "16Gi"
+          requests:
+            cpu: 250m
+            memory: "100Mi"
+        ports:
+        - containerPort: 8040
+          name: be-ws-port
+        - containerPort: 9050
+          name: be-hs-port
+        - containerPort: 9060
+          name: be-port
+        - containerPort: 9070
+          name: be-rpc-port
+        volumeMounts:
+        - mountPath: /opt/output/be/data
+          name: bdp-doris-be01-pvc
+          subPath: data
+        - mountPath: /opt/output/be/log
+          name: bdp-doris-be01-pvc
+          subPath: log
+      volumes:
+      - name: bdp-doris-be01-pvc
+        persistentVolumeClaim:
+          claimName: bdp-doris-be01-pvc
+---
+# be02
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: bdp-doris-be02
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: bdp-doris-be02
+  serviceName: bdp-doris-be02-hs
+  updateStrategy:
+    type: RollingUpdate
+  podManagementPolicy: OrderedReady
+  template:
+    metadata:
+      labels:
+        app: dbp-doris
+        k8s-app: bdp-doris-be02
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: 192.168.0.12
+      restartPolicy: Always
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: bdp-doris-be02
+        image: pony/doris:v1
+        imagePullPolicy: Always
+        args:
+        - be
+        env:
+        - name: FE_HOST
+          value: 192.168.0.15  # fe 的 hostname，需要根据实际情况修改
+        - name: BE_HOST
+          value: 192.168.0.12 # be 的 hostname，需要根据实际情况修改
+        - name: BE_NETWORK
+          value: 192.168.0.12/24  # 指定 fe 通信的网卡
+        resources:
+          limits:
+            cpu: "8"
+            memory: "16Gi"
+          requests:
+            cpu: 250m
+            memory: "100Mi"
+        ports:
+        - containerPort: 8040
+          name: be-ws-port
+        - containerPort: 9050
+          name: be-hs-port
+        - containerPort: 9060
+          name: be-port
+        - containerPort: 9070
+          name: be-rpc-port
+        volumeMounts:
+        - mountPath: /opt/output/be/data
+          name: bdp-doris-be02-pvc
+          subPath: data
+        - mountPath: /opt/output/be/log
+          name: bdp-doris-be02-pvc
+          subPath: log
+      volumes:
+      - name: bdp-doris-be02-pvc
+        persistentVolumeClaim:
+          claimName: bdp-doris-be02-pvc
+---
+# be03
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: bdp-doris-be03
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: bdp-doris-be03
+  serviceName: bdp-doris-be03-hs
+  updateStrategy:
+    type: RollingUpdate
+  podManagementPolicy: OrderedReady
+  template:
+    metadata:
+      labels:
+        app: dbp-doris
+        k8s-app: bdp-doris-be03
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: 192.168.0.13
+      restartPolicy: Always
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: bdp-doris-be03
+        image: pony/doris:v1
+        imagePullPolicy: Always
+        args:
+        - be
+        env:
+        - name: FE_HOST
+          value: 192.168.0.15  # fe 的 hostname，需要根据实际情况修改
+        - name: BE_HOST
+          value: 192.168.0.13 # be 的 hostname，需要根据实际情况修改
+        - name: BE_NETWORK
+          value: 192.168.0.13/24  # 指定 fe 通信的网卡
+        resources:
+          limits:
+            cpu: "8"
+            memory: "16Gi"
+          requests:
+            cpu: 250m
+            memory: "100Mi"
+        ports:
+        - containerPort: 8040
+          name: be-ws-port
+        - containerPort: 9050
+          name: be-hs-port
+        - containerPort: 9060
+          name: be-port
+        - containerPort: 9070
+          name: be-rpc-port
+        volumeMounts:
+        - mountPath: /opt/output/be/data
+          name: bdp-doris-be03-pvc
+          subPath: data
+        - mountPath: /opt/output/be/log
+          name: bdp-doris-be03-pvc
+          subPath: log
+      volumes:
+      - name: bdp-doris-be03-pvc
+        persistentVolumeClaim:
+          claimName: bdp-doris-be03-pvc

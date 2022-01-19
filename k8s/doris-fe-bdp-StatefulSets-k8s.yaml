@@ -1,0 +1,155 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: bdp-doris-fe
+  namespace: bdp
+  labels:
+    k8s-app: bdp-doris-fe
+spec:
+  ports:
+    - name: tcp-8030-8030
+      protocol: TCP
+      port: 8030
+      targetPort: 8030
+    - name: tcp-9030-9030
+      protocol: TCP
+      port: 9030
+      targetPort: 9030
+    - name: tcp-9020-9020
+      protocol: TCP
+      port: 9020
+      targetPort: 9020
+  clusterIP: 11.254.120.1
+  selector:
+    k8s-app: bdp-doris-fe
+---
+# 创建Headless Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: bdp-doris-fe-hs
+  namespace: bdp
+  labels:
+    k8s-app: bdp-doris-fe
+spec:
+  ports:
+    - name: tcp-8030-8030-fe-hs
+      protocol: TCP
+      port: 8030
+      targetPort: 8030
+    - name: tcp-9030-9030-fe-hs
+      protocol: TCP
+      port: 9030
+      targetPort: 9030
+    - name: tcp-9020-9020-fe-hs
+      protocol: TCP
+      port: 9020
+      targetPort: 9020
+  clusterIP: None
+  selector:
+    k8s-app: bdp-doris-fe
+---
+# 创建pv，需要修改为实际环境的pv
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: bdp-doris-fe-pv  ##pv名称
+spec:
+  capacity:
+    storage: 150Gi ## pv大小，与云硬盘大小一致即可
+  accessModes:
+    - ReadWriteOnce ## pv读写类型，目前支持ReadWriteOnce和ReadOnlyMany
+  mountOptions:
+    - rw ##挂载类型有只读（ro）,读写{rw}，挂载类型和accessModes要对应起来
+    - discard
+  persistentVolumeReclaimPolicy: Retain ##目前只支持Retain模式
+  storageClassName: doris-local-storage ## 使用预先创建的sc
+  local:
+    path: /mnt/fe
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - ambari01
+---
+#pvc
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bdp-doris-fe-pvc ##pvc名称
+  namespace: bdp
+spec:                ##pv的筛选条件
+  accessModes:
+     - ReadWriteOnce ## pv读写模式
+  volumeMode: Filesystem
+  volumeName: bdp-doris-fe-pv   ##指定pv名称，此为可选字段，当指定特定的pv名称时，只有对应的名称的pv能被bound
+  storageClassName: doris-local-storage  # 根据实际情况而定是否需要删除
+  resources:
+     requests:
+       storage: 150Gi  ##pv大小
+---
+# 创建StatefulSets
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: bdp-doris-fe
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: bdp-doris-fe
+  serviceName: bdp-doris-fe-hs
+  updateStrategy:
+    type: RollingUpdate
+  podManagementPolicy: OrderedReady
+  template:
+    metadata:
+      labels:
+        app: dbp-doris
+        k8s-app: bdp-doris-fe
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: 192.168.0.15
+      restartPolicy: Always
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: bdp-doris-fe
+        image: pony/doris:v1
+        imagePullPolicy: Always
+        args:
+        - fe
+        env:
+        - name: FE_NETWORK
+          value: 192.168.0.15/24  # fe 的 hostname，需要根据实际情况修改
+        resources:
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+          requests:
+            cpu: 250m
+            memory: "200Mi"
+        ports:
+        - containerPort: 8030
+          name: fe-http-port
+        - containerPort: 9030
+          name: fe-query-port
+        - containerPort: 9020
+          name: fe-rpc-port
+        volumeMounts:
+        - mountPath: /opt/output/fe/palo-meta
+          name: bdp-doris-fe-pvc
+          subPath: palo-meta
+        - mountPath: /opt/output/fe/temp_dir
+          name: bdp-doris-fe-pvc
+          subPath: temp_dir
+        - mountPath: /opt/output/fe/log
+          name: bdp-doris-fe-pvc
+          subPath: log
+      volumes:
+      - name: bdp-doris-fe-pvc
+        persistentVolumeClaim:
+          claimName: bdp-doris-fe-pvc
